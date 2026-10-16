@@ -1,22 +1,38 @@
 # descroix-backend
 
-Backend API + XML sync pour le site Cabinet Descroix. Déployé actuellement sur un VPS personnel de secours via Dokploy (Docker), en attendant une vraie infra.
+Backend API + XML sync pour le site Cabinet Descroix. Destiné à un hébergement mutualisé OVH (Performance).
 
 ## Structure
 
-- `api/` — endpoints PHP (index, getNew, getOne, search, contact). Lit les annonces depuis `/var/www/data/dataset.xml` en lecture locale (pas de fetch réseau).
-- `sync/index.php` — script qui va chercher le flux XML source (`clients.ac3-distribution.com`, plateforme immo-facile) et réécrit `/var/www/data/dataset.xml`.
-- `sync/crontab` + `docker-entrypoint.sh` — le refresh tourne **dans le conteneur**, toutes les 15 min, via cron. Un premier refresh se fait aussi au démarrage du conteneur pour ne pas partir avec un `dataset.xml` vide juste après un déploiement.
+- `public/` — document root à déclarer dans le Multisite OVH. Contient les endpoints PHP (`index`, `getNew`, `getOne`, `search`, `contact`). Lisent `data/dataset.xml` en local (pas de fetch réseau par requête).
+- `src/Mailer.php` — envoi des emails du formulaire de contact via le relais SMTP Brevo (PHPMailer).
+- `cron/sync.php` — va chercher le flux XML source (`clients.ac3-distribution.com`, plateforme immo-facile) et réécrit `data/dataset.xml`. À exécuter toutes les 15 min via les *Tâches planifiées* du manager OVH : `php /chemin/vers/cron/sync.php`.
+- `data/` — hors document root, non accessible publiquement. Contient `dataset.xml` (généré par le sync) et `sync.log`.
+- `bootstrap.php` — charge l'autoload Composer et le `.env`, défini les constantes `DATA_PATH` / `LOG_PATH`. Requis par chaque script public et par `cron/sync.php`.
 
-Tout est packagé dans un seul `Dockerfile` à la racine — `docker build`/déploiement suffit, aucune tâche cron à configurer à la main sur l'hôte.
+## Configuration
 
-## Déploiement
+Copier `.env.example` en `.env` et renseigner les valeurs réelles (jamais commité) :
+- Identifiants SMTP Brevo (`BREVO_SMTP_*`) et adresses d'envoi/réception (`MAIL_*`)
+- URL du flux XML source (`XML_SOURCE_URL`)
 
-1. Build l'image : `docker build -t descroixapi .`
-2. Run : `docker run -d -p 80:80 descroixapi`
-   (un volume nommé sur `/var/www/data` est recommandé pour garder les données entre deux redéploiements, mais pas obligatoire — le script de sync tourne au démarrage du conteneur de toute façon)
-3. Reverse proxy (Traefik/nginx) devant le conteneur pour le TLS + routage du domaine `descroixapi.comsea.fr`.
+## Déploiement sur OVH mutualisé (Performance)
+
+1. `composer install --no-dev --optimize-autoloader` (Composer disponible en SSH sur l'offre Performance)
+2. Déclarer `public/` comme document root pour `api.descroiximmobilier.com` dans le Multisite
+3. Créer le `.env` directement sur le serveur à partir de `.env.example`
+4. Créer une tâche planifiée OVH : `php /chemin/vers/cron/sync.php`, toutes les 15 min
+5. Lancer `cron/sync.php` une fois manuellement après le premier déploiement pour générer `data/dataset.xml` (sinon les endpoints renvoient 502 jusqu'au premier passage du cron)
+
+## Développement local (Docker, optionnel)
+
+```sh
+docker build -t descroixapi .
+docker run -d -p 8080:80 -v $(pwd)/.env:/var/www/.env descroixapi
+```
+
+Le `.env` est monté en volume plutôt que copié dans l'image (il ne doit jamais être commité ni baké dans une image).
 
 ## Historique
 
-Anciennement deux hébergements OVH séparés (`descroixapi.comsea.fr` et `descroixxml.comsea.fr` communiquant en HTTPS). Fusionnés ici sur un seul host pour supprimer la dépendance réseau entre les deux (source de hangs/timeouts en prod).
+Anciennement deux hébergements OVH séparés (`descroixapi.comsea.fr` et `descroixxml.comsea.fr` communiquant en HTTPS), puis fusionnés et déployés via Dokploy (Docker) sur un VPS personnel de secours. Migré ici vers un hébergement mutualisé OVH Performance, sous le nouveau domaine `api.descroiximmobilier.com`.

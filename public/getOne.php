@@ -1,9 +1,12 @@
 <?php
 /*
-Path: /contact
-Name: Contact
-Description: Traitement du formulaire de contact
+Path: /getOne
+Name: getOne
+Description: Retourne un bien de l'agence à partir de son slug
 */
+
+require_once __DIR__ . '/../bootstrap.php';
+
 header("Content-type: application/json;");
 header("Access-Control-Allow-Origin: *");
 header("Access-Control-Allow-Headers: *");
@@ -98,7 +101,7 @@ foreach ($fields as $name => $value) {
 /**
  * @var xml SimplexmlElement
  */
-$xml = @simplexml_load_file('/var/www/data/dataset.xml', 'SimpleXMLElement', LIBXML_NOCDATA);
+$xml = @simplexml_load_file(DATA_PATH, 'SimpleXMLElement', LIBXML_NOCDATA);
 
 if ($xml === false) {
   http_response_code(502);

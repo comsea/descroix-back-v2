@@ -1,1 +1,6 @@
 .DS_Store
+.env
+/vendor/
+/composer.lock
+/data/*.xml
+/data/*.log

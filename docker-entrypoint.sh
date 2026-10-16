@@ -1,4 +1,4 @@
 #!/bin/sh
 
-# Dokploy handles cron scheduling via Scheduled Tasks
+# Le sync XML est planifié en externe (Tâches planifiées OVH en prod), pas dans ce conteneur
 exec "$@"

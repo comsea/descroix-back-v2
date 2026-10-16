@@ -1,1 +1,0 @@
-*/15 * * * * www-data php /opt/sync/index.php >> /var/log/descroix-sync.log 2>&1

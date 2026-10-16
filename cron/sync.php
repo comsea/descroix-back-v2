@@ -1,13 +1,12 @@
 <?php
 
-$file = '/var/www/data/dataset.xml';
-$source = 'http://clients.ac3-distribution.com/office12/cabine_2102081130/cache/export.xml';
-$logFile = '/var/log/descroix-sync.log';
+require_once __DIR__ . '/../bootstrap.php';
+
+$source = $_ENV['XML_SOURCE_URL'];
 
 function log_message($msg) {
-    global $logFile;
     $timestamp = date('Y-m-d H:i:s');
-    file_put_contents($logFile, "[$timestamp] $msg\n", FILE_APPEND);
+    file_put_contents(LOG_PATH, "[$timestamp] $msg\n", FILE_APPEND);
     echo $msg . "\n";
 }
 
@@ -38,12 +37,12 @@ try {
 
     $content = str_replace('encoding="ISO-8859-1"', 'encoding="UTF-8"', $content);
 
-    if (file_put_contents($file, $content) === false) {
-        throw new Exception("Impossible d'écrire dans $file - permissions insuffisantes?");
+    if (file_put_contents(DATA_PATH, $content) === false) {
+        throw new Exception("Impossible d'écrire dans " . DATA_PATH . " - permissions insuffisantes?");
     }
 
     restore_error_handler();
-    log_message("✓ Synchronisation réussie. Fichier sauvegardé: $file");
+    log_message("✓ Synchronisation réussie. Fichier sauvegardé: " . DATA_PATH);
 
 } catch (Exception $e) {
     log_message("✗ Erreur: " . $e->getMessage());
